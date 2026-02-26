@@ -15,6 +15,7 @@
             </xpath>
 
             <xpath expr="//group[@name='transaction_details']" position="inside">
+                <field name="operation" invisible="1"/>
                 <field name="fintoc_checkout_session_id" invisible="provider_code != 'fintoc'"/>
                 <field name="fintoc_payment_intent_id" invisible="provider_code != 'fintoc'"/>
                 <field name="fintoc_refund_id" invisible="provider_code != 'fintoc'"/>

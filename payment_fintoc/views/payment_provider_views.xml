@@ -43,7 +43,9 @@
                     <field name="fintoc_collection_mode"/>
                     <field name="fintoc_enable_bank_transfer"/>
                     <field name="fintoc_enable_card"/>
-                    <label string="If both methods are enabled, Fintoc can display all available options when no explicit choice is made."/>
+                    <div class="o_form_label">
+                        If both methods are enabled, Fintoc can display all available options when no explicit choice is made.
+                    </div>
                 </group>
 
                 <group string="Recipient Account (Direct Mode)"
