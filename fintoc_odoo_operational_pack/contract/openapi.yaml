@@ -1,0 +1,412 @@
+openapi: 3.0.3
+info:
+  title: Fintoc Odoo Plugin Contract
+  version: 1.0.0
+  description: |
+    Stable contract for Fintoc <-> Odoo plugin integration.
+    Scope: Payments (redirect checkout sessions) and refunds only.
+servers:
+  - url: https://api.fintoc.com
+security:
+  - SecretKeyAuth: []
+paths:
+  /v2/checkout_sessions:
+    post:
+      summary: Create checkout session (preferred)
+      operationId: createCheckoutSessionV2
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutSessionCreateRequest'
+      responses:
+        '201':
+          description: Session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutSessionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /v1/checkout_sessions:
+    post:
+      summary: Create checkout session (fallback)
+      operationId: createCheckoutSessionV1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutSessionCreateRequest'
+      responses:
+        '201':
+          description: Session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutSessionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /v1/webhook_endpoints:
+    post:
+      summary: Register webhook endpoint
+      operationId: createWebhookEndpoint
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookEndpointRequest'
+      responses:
+        '201':
+          description: Webhook endpoint created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookEndpointResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /v1/webhook_endpoints/{webhook_endpoint_id}:
+    put:
+      summary: Update webhook endpoint
+      operationId: updateWebhookEndpoint
+      parameters:
+        - name: webhook_endpoint_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookEndpointRequest'
+      responses:
+        '200':
+          description: Webhook endpoint updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookEndpointResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /v1/refunds:
+    post:
+      summary: Create refund
+      operationId: createRefund
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefundCreateRequest'
+      responses:
+        '201':
+          description: Refund created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefundResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /v1/refunds/{refund_id}/cancel:
+    post:
+      summary: Cancel pending refund
+      operationId: cancelRefund
+      parameters:
+        - name: refund_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Cancellation accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefundResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+components:
+  securitySchemes:
+    SecretKeyAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Raw Fintoc secret key value (not Bearer-prefixed).
+  schemas:
+    CheckoutSessionCreateRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - amount
+        - currency
+        - success_url
+        - cancel_url
+      properties:
+        amount:
+          type: integer
+          minimum: 1
+          description: Amount in minor currency units.
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+          description: ISO 4217 currency code (uppercase).
+        success_url:
+          type: string
+          format: uri
+        cancel_url:
+          type: string
+          format: uri
+        customer_email:
+          type: string
+          format: email
+          description: Required for robust refund operations in Odoo plugin.
+        payment_methods:
+          type: array
+          items:
+            type: string
+            enum: [payment_intent, payment_initiation, card]
+          minItems: 1
+          uniqueItems: true
+          description: |
+            If omitted, Fintoc displays all available methods.
+            Plugin behavior:
+            - Bank transfer uses payment_intent first.
+            - On unsupported payment_intent, plugin retries with payment_initiation.
+        payment_method_options:
+          type: object
+          properties:
+            payment_intent:
+              $ref: '#/components/schemas/PaymentIntentOptions'
+            payment_initiation:
+              $ref: '#/components/schemas/PaymentIntentOptions'
+          additionalProperties: true
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+          description: Odoo reconciliation metadata.
+    PaymentIntentOptions:
+      type: object
+      additionalProperties: false
+      properties:
+        recipient_account:
+          $ref: '#/components/schemas/RecipientAccount'
+    RecipientAccount:
+      type: object
+      additionalProperties: false
+      required: [holder_id, number, type, institution_id]
+      properties:
+        holder_id:
+          type: string
+          minLength: 1
+        number:
+          type: string
+          minLength: 1
+        type:
+          type: string
+          minLength: 1
+        institution_id:
+          type: string
+          minLength: 1
+    CheckoutSessionResponse:
+      type: object
+      additionalProperties: true
+      required: [id, redirect_url]
+      properties:
+        id:
+          type: string
+        redirect_url:
+          type: string
+          format: uri
+        status:
+          type: string
+          nullable: true
+    WebhookEndpointRequest:
+      type: object
+      additionalProperties: false
+      required: [url, enabled_events]
+      properties:
+        url:
+          type: string
+          format: uri
+          pattern: '^https://'
+        enabled_events:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            type: string
+            enum:
+              - checkout_session.finished
+              - payment_intent.succeeded
+              - payment_intent.failed
+              - payment_intent.rejected
+              - refund.in_progress
+              - refund.succeeded
+              - refund.failed
+    WebhookEndpointResponse:
+      type: object
+      additionalProperties: true
+      required: [id]
+      properties:
+        id:
+          type: string
+        url:
+          type: string
+          format: uri
+        enabled_events:
+          type: array
+          items:
+            type: string
+    RefundCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [resource_id, resource_type]
+      properties:
+        resource_id:
+          type: string
+          description: payment_intent_id captured from webhook checkout lifecycle.
+        resource_type:
+          type: string
+          enum: [payment_intent]
+        amount:
+          type: integer
+          minimum: 1
+          description: Optional partial refund amount in minor units.
+    RefundResponse:
+      type: object
+      additionalProperties: true
+      required: [id, status]
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          enum: [in_progress, succeeded, failed, canceled, pending]
+        resource_id:
+          type: string
+          nullable: true
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+          nullable: true
+        message:
+          type: string
+          nullable: true
+        request_id:
+          type: string
+          nullable: true
+  responses:
+    BadRequest:
+      description: Invalid request payload.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Invalid or missing secret key.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Resource or endpoint not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: Conflict (e.g. duplicate idempotency key state mismatch).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    UnprocessableEntity:
+      description: Business validation error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    TooManyRequests:
+      description: Rate limit exceeded.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalServerError:
+      description: Unexpected server error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'

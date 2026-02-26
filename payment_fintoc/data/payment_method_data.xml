@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+
+    <record id="payment_method_fintoc_bank_transfer" model="payment.method">
+        <field name="name">Fintoc - Bank transfer</field>
+        <field name="code">fintoc_bank_transfer</field>
+        <field name="sequence">1000</field>
+        <field name="image" type="base64" file="payment/static/img/bank.png"/>
+        <field name="support_tokenization">False</field>
+        <field name="support_express_checkout">False</field>
+        <field name="support_refund">partial</field>
+    </record>
+
+    <record id="payment_method_fintoc_card" model="payment.method">
+        <field name="name">Fintoc - Card</field>
+        <field name="code">fintoc_card</field>
+        <field name="sequence">1001</field>
+        <field name="image" type="base64" file="payment/static/img/card.png"/>
+        <field name="support_tokenization">False</field>
+        <field name="support_express_checkout">False</field>
+        <field name="support_refund">partial</field>
+    </record>
+
+</odoo>

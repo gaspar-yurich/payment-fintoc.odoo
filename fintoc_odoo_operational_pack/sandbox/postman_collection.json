@@ -1,0 +1,64 @@
+{
+  "info": {
+    "name": "Fintoc Odoo Plugin - Sandbox",
+    "description": "Requests for checkout/refund + simulated webhook flow",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Create Checkout Session v2",
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Authorization", "value": "{{fintoc_secret_key}}"},
+          {"key": "Content-Type", "value": "application/json"},
+          {"key": "Idempotency-Key", "value": "{{idempotency_key}}"}
+        ],
+        "url": "https://api.fintoc.com/v2/checkout_sessions",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"amount\": 1000,\n  \"currency\": \"CLP\",\n  \"success_url\": \"{{odoo_base_url}}/payment/fintoc/return/success?reference={{odoo_tx_reference}}&access_token={{odoo_access_token}}\",\n  \"cancel_url\": \"{{odoo_base_url}}/payment/fintoc/return/cancel?reference={{odoo_tx_reference}}&access_token={{odoo_access_token}}\",\n  \"customer_email\": \"customer@example.com\",\n  \"metadata\": {\n    \"odoo_tx_reference\": \"{{odoo_tx_reference}}\",\n    \"odoo_model\": \"account.move\",\n    \"odoo_document_number\": \"INV/2026/0001\"\n  }\n}"
+        }
+      }
+    },
+    {
+      "name": "Create Refund",
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Authorization", "value": "{{fintoc_secret_key}}"},
+          {"key": "Content-Type", "value": "application/json"},
+          {"key": "Idempotency-Key", "value": "{{refund_idempotency_key}}"}
+        ],
+        "url": "https://api.fintoc.com/v1/refunds",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"resource_id\": \"{{payment_intent_id}}\",\n  \"resource_type\": \"payment_intent\",\n  \"amount\": 500\n}"
+        }
+      }
+    },
+    {
+      "name": "Cancel Refund",
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Authorization", "value": "{{fintoc_secret_key}}"},
+          {"key": "Content-Type", "value": "application/json"},
+          {"key": "Idempotency-Key", "value": "{{cancel_idempotency_key}}"}
+        ],
+        "url": "https://api.fintoc.com/v1/refunds/{{refund_id}}/cancel"
+      }
+    }
+  ],
+  "variable": [
+    {"key": "fintoc_secret_key", "value": ""},
+    {"key": "odoo_base_url", "value": "https://odoo.example.com"},
+    {"key": "odoo_tx_reference", "value": "TX-REF-001"},
+    {"key": "odoo_access_token", "value": ""},
+    {"key": "idempotency_key", "value": "TX-REF-001"},
+    {"key": "payment_intent_id", "value": "pi_test_001"},
+    {"key": "refund_id", "value": "re_test_001"},
+    {"key": "refund_idempotency_key", "value": "R-TX-REF-001"},
+    {"key": "cancel_idempotency_key", "value": "cancel-R-TX-REF-001"}
+  ]
+}

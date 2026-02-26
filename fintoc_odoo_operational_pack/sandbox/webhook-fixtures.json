@@ -1,0 +1,88 @@
+{
+  "checkout_session.finished": {
+    "id": "evt_checkout_finished_001",
+    "type": "checkout_session.finished",
+    "data": {
+      "id": "cs_test_001",
+      "payment_intent_id": "pi_test_001",
+      "metadata": {
+        "odoo_tx_reference": "TX-REF-001",
+        "odoo_model": "account.move",
+        "odoo_document_number": "INV/2026/0001",
+        "partner_id": "42"
+      }
+    }
+  },
+  "payment_intent.succeeded": {
+    "id": "evt_pi_succeeded_001",
+    "type": "payment_intent.succeeded",
+    "data": {
+      "id": "pi_test_001",
+      "status": "succeeded",
+      "metadata": {
+        "odoo_tx_reference": "TX-REF-001"
+      }
+    }
+  },
+  "payment_intent.failed": {
+    "id": "evt_pi_failed_001",
+    "type": "payment_intent.failed",
+    "data": {
+      "id": "pi_test_001",
+      "status": "failed",
+      "failure_reason": "insufficient_funds",
+      "metadata": {
+        "odoo_tx_reference": "TX-REF-001"
+      }
+    }
+  },
+  "payment_intent.rejected": {
+    "id": "evt_pi_rejected_001",
+    "type": "payment_intent.rejected",
+    "data": {
+      "id": "pi_test_001",
+      "status": "rejected",
+      "reason": "compliance_check_failed",
+      "metadata": {
+        "odoo_tx_reference": "TX-REF-001"
+      }
+    }
+  },
+  "refund.in_progress": {
+    "id": "evt_refund_in_progress_001",
+    "type": "refund.in_progress",
+    "data": {
+      "id": "re_test_001",
+      "status": "in_progress",
+      "resource_id": "pi_test_001",
+      "metadata": {
+        "odoo_tx_reference": "R-TX-REF-001"
+      }
+    }
+  },
+  "refund.succeeded": {
+    "id": "evt_refund_succeeded_001",
+    "type": "refund.succeeded",
+    "data": {
+      "id": "re_test_001",
+      "status": "succeeded",
+      "resource_id": "pi_test_001",
+      "metadata": {
+        "odoo_tx_reference": "R-TX-REF-001"
+      }
+    }
+  },
+  "refund.failed": {
+    "id": "evt_refund_failed_001",
+    "type": "refund.failed",
+    "data": {
+      "id": "re_test_001",
+      "status": "failed",
+      "resource_id": "pi_test_001",
+      "failure_reason": "refund_window_expired",
+      "metadata": {
+        "odoo_tx_reference": "R-TX-REF-001"
+      }
+    }
+  }
+}

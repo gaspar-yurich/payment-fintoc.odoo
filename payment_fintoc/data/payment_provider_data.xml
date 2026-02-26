@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+
+    <record id="payment.payment_provider_fintoc" model="payment.provider">
+        <field name="name">Fintoc</field>
+        <field name="code">fintoc</field>
+        <field name="state">disabled</field>
+        <field name="redirect_form_view_id" ref="redirect_form"/>
+        <field name="fintoc_collection_mode">collects</field>
+        <field name="fintoc_enable_bank_transfer">True</field>
+        <field name="fintoc_enable_card">True</field>
+        <field name="payment_method_ids"
+               eval="[Command.set([
+                         ref('payment_fintoc.payment_method_fintoc_bank_transfer'),
+                         ref('payment_fintoc.payment_method_fintoc_card'),
+                     ])]"
+        />
+    </record>
+
+</odoo>
