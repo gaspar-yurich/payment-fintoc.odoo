@@ -62,3 +62,20 @@ class TestPaymentProvider(FintocCommon):
             return_value=timestamp + 999,
         ):
             self.assertFalse(self.provider._fintoc_validate_webhook_signature(header, payload))
+
+    def test_accounting_setup_creates_provider_payment_method_line(self):
+        self.provider._fintoc_ensure_accounting_setup()
+
+        account_payment_method = self.env['account.payment.method'].search([
+            ('code', '=', 'fintoc'),
+            ('payment_type', '=', 'inbound'),
+        ], limit=1)
+        self.assertTrue(account_payment_method)
+        self.assertTrue(self.provider.journal_id)
+
+        payment_method_line = self.env['account.payment.method.line'].search([
+            ('payment_provider_id', '=', self.provider.id),
+            ('journal_id', '=', self.provider.journal_id.id),
+        ], limit=1)
+        self.assertTrue(payment_method_line)
+        self.assertEqual(payment_method_line.payment_method_id, account_payment_method)
