@@ -16,7 +16,9 @@ Features:
     'website': 'https://fintoc.com',
     'license': 'LGPL-3',
     'images': [
-        'static/description/fintoc_screenshot.png',
+        'static/description/fintoc_cover.png',
+        'static/description/fintoc_provider_screen.png',
+        'static/description/fintoc_webhook_screen.png',
         'static/description/icon.png',
     ],
     'depends': ['payment'],
