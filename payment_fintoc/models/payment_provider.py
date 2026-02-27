@@ -224,7 +224,9 @@ class PaymentProvider(models.Model):
     @api.model_create_multi
     def create(self, values_list):
         providers = super().create(values_list)
-        providers.filtered(lambda p: p.code == 'fintoc')._fintoc_sync_payment_methods()
+        fintoc_providers = providers.filtered(lambda p: p.code == 'fintoc')
+        fintoc_providers._fintoc_sync_payment_methods()
+        fintoc_providers._fintoc_ensure_accounting_setup()
         return providers
 
     def write(self, values):
@@ -237,6 +239,18 @@ class PaymentProvider(models.Model):
             )
         ):
             self.filtered(lambda p: p.code == 'fintoc')._fintoc_sync_payment_methods()
+        if any(
+            key in values
+            for key in (
+                'code',
+                'state',
+                'company_id',
+                'journal_id',
+                'fintoc_enable_bank_transfer',
+                'fintoc_enable_card',
+            )
+        ):
+            self.filtered(lambda p: p.code == 'fintoc')._fintoc_ensure_accounting_setup()
         return result
 
     # === BUSINESS METHODS === #
@@ -258,6 +272,52 @@ class PaymentProvider(models.Model):
             provider.with_context(skip_fintoc_pm_sync=True).write({
                 'payment_method_ids': [Command.set(method_ids)]
             })
+
+    def _fintoc_ensure_accounting_setup(self):
+        """Ensure account payment method + journal line exist for Fintoc providers."""
+        if (
+            'account.payment.method' not in self.env
+            or 'account.payment.method.line' not in self.env
+        ):
+            return
+
+        payment_method_model = self.env['account.payment.method'].sudo()
+        payment_method_line_model = self.env['account.payment.method.line'].sudo()
+
+        account_payment_method = payment_method_model.search([
+            ('code', '=', 'fintoc'),
+            ('payment_type', '=', 'inbound'),
+        ], limit=1)
+        if not account_payment_method:
+            account_payment_method = payment_method_model.create({
+                'name': _("Fintoc"),
+                'code': 'fintoc',
+                'payment_type': 'inbound',
+            })
+
+        for provider in self.filtered(lambda p: p.code == 'fintoc'):
+            provider_sudo = provider.sudo()
+            # Trigger compute/default journal selection in account_payment.
+            provider_sudo.journal_id
+            if provider_sudo.journal_id and hasattr(provider_sudo, '_ensure_payment_method_line'):
+                provider_sudo._ensure_payment_method_line(allow_create=True)
+
+            if not provider_sudo.journal_id:
+                continue
+
+            pay_method_line = payment_method_line_model.search([
+                ('payment_provider_id', '=', provider_sudo.id),
+                ('journal_id', '=', provider_sudo.journal_id.id),
+            ], limit=1)
+            if not pay_method_line:
+                payment_method_line_model.create({
+                    'name': provider_sudo.name,
+                    'payment_method_id': account_payment_method.id,
+                    'journal_id': provider_sudo.journal_id.id,
+                    'payment_provider_id': provider_sudo.id,
+                })
+            elif pay_method_line.payment_method_id != account_payment_method:
+                pay_method_line.payment_method_id = account_payment_method
 
     def _get_default_payment_method_codes(self):
         """Override of payment to return default Fintoc payment methods."""
