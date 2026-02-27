@@ -15,7 +15,10 @@ Features:
     'author': 'Community',
     'website': 'https://fintoc.com',
     'license': 'LGPL-3',
-    'images': ['static/description/icon.png'],
+    'images': [
+        'static/description/fintoc_screenshot.png',
+        'static/description/icon.png',
+    ],
     'depends': ['payment'],
     'external_dependencies': {
         'python': ['requests'],
