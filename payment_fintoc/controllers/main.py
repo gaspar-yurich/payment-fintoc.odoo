@@ -1,6 +1,7 @@
 import json
 import logging
 
+from werkzeug import urls
 from werkzeug.exceptions import BadRequest, Forbidden
 
 from odoo import _, fields, http
@@ -32,7 +33,7 @@ class PaymentFintocController(http.Controller):
         if checkout_session_id:
             tx_sudo.write({'fintoc_checkout_session_id': checkout_session_id})
         # Keep transaction in draft until webhook confirmation to avoid blocking retries in portal.
-        return request.redirect('/payment/status')
+        return request.redirect(self._get_payment_status_url(), local=False)
 
     @http.route(
         const.RETURN_CANCEL_ROUTE,
@@ -55,7 +56,7 @@ class PaymentFintocController(http.Controller):
                 state_message=_("Checkout was canceled on Fintoc."),
                 extra_allowed_states=('draft', 'pending'),
             )
-        return request.redirect('/payment/status')
+        return request.redirect(self._get_payment_status_url(), local=False)
 
     @http.route(
         const.WEBHOOK_ROUTE,
@@ -181,3 +182,10 @@ class PaymentFintocController(http.Controller):
         if not tx_sudo:
             raise Forbidden()
         return tx_sudo
+
+    @staticmethod
+    def _get_payment_status_url():
+        base_url = request.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        if base_url:
+            return urls.url_join(base_url, '/payment/status')
+        return '/payment/status'
