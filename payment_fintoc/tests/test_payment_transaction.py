@@ -66,6 +66,22 @@ class TestPaymentTransaction(FintocCommon):
         self.assertEqual(tx.state, 'done')
         self.assertEqual(tx.fintoc_payment_intent_id, 'pi_123')
 
+    def test_checkout_session_finished_keeps_draft_until_payment_intent_status(self):
+        tx = self._create_transaction(
+            flow='redirect',
+            payment_method_id=self.payment_method_bank.id,
+            reference='FINTOC-TX-002-A',
+        )
+
+        tx._process_notification_data({
+            'event_type': 'checkout_session.finished',
+            'checkout_session_id': 'cs_finished_1',
+            'resource': {'id': 'cs_finished_1'},
+        })
+
+        self.assertEqual(tx.state, 'draft')
+        self.assertEqual(tx.fintoc_checkout_session_id, 'cs_finished_1')
+
     def test_send_refund_request_creates_pending_refund_transaction(self):
         tx = self._create_transaction(
             flow='redirect',

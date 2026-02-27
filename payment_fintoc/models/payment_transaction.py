@@ -410,10 +410,7 @@ class PaymentTransaction(models.Model):
             self.write(updates)
 
         if event_type == 'checkout_session.finished':
-            if self.state == 'draft':
-                self._set_pending(state_message=_(
-                    "Checkout session finished. Waiting final payment intent status from webhook."
-                ))
+            # Keep draft state and wait for final payment_intent.* webhook status.
             return
 
         if event_type == 'payment_intent.succeeded':
