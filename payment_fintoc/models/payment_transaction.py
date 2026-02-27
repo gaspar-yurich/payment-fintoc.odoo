@@ -131,7 +131,9 @@ class PaymentTransaction(models.Model):
     def _fintoc_build_return_urls(self):
         """Build success/cancel URLs for Fintoc checkout session."""
         self.ensure_one()
-        base_url = self.provider_id.get_base_url()
+        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        if not base_url:
+            base_url = self.provider_id.get_base_url()
         access_token = self._fintoc_generate_return_access_token()
 
         success_params = {
@@ -182,23 +184,36 @@ class PaymentTransaction(models.Model):
     def _fintoc_create_checkout_session_with_fallback(self, payload):
         """Create checkout session with automatic payment_intent fallback handling."""
         self.ensure_one()
-        idempotency_key = self.reference
+        idempotency_key = self._fintoc_build_idempotency_key('checkout')
 
         try:
             return self.provider_id._fintoc_create_checkout_session(payload, idempotency_key)
-        except ValidationError:
-            if not self._fintoc_payload_uses_payment_intent(payload):
+        except ValidationError as error:
+            if (
+                not self._fintoc_payload_uses_payment_intent(payload)
+                or not self._fintoc_should_fallback_to_payment_initiation(error)
+            ):
                 raise
 
             fallback_payload = self._fintoc_replace_payment_intent_with_payment_initiation(payload)
+            fallback_idempotency_key = self._fintoc_build_idempotency_key(
+                'checkout-payment-initiation-fallback'
+            )
             _logger.info(
                 "Retrying Fintoc checkout with payment_initiation fallback for tx %s",
                 self.reference,
             )
             return self.provider_id._fintoc_create_checkout_session(
                 fallback_payload,
-                idempotency_key,
+                fallback_idempotency_key,
             )
+
+    def _fintoc_build_idempotency_key(self, suffix):
+        """Build a deterministic idempotency key unique per transaction."""
+        self.ensure_one()
+        tx_identifier = self.id or self.reference
+        key = f"odoo-fintoc-tx-{tx_identifier}-{suffix}"
+        return key[:255]
 
     @staticmethod
     def _fintoc_payload_uses_payment_intent(payload):
@@ -206,6 +221,16 @@ class PaymentTransaction(models.Model):
         return 'payment_intent' in payment_methods or 'payment_intent' in payload.get(
             'payment_method_options', {}
         )
+
+    @staticmethod
+    def _fintoc_should_fallback_to_payment_initiation(error):
+        """Return whether the API error indicates payment_intent is unsupported."""
+        message = str(error).lower()
+        has_payment_intent_signal = 'payment_intent' in message
+        has_incompatibility_signal = any(
+            token in message for token in ('invalid_enum', 'unsupported', 'not supported')
+        )
+        return has_payment_intent_signal and has_incompatibility_signal
 
     @staticmethod
     def _fintoc_replace_payment_intent_with_payment_initiation(payload):

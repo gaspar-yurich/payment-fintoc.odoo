@@ -319,11 +319,14 @@ class PaymentProvider(models.Model):
 
         if self._fintoc_should_retry_checkout_with_v1(status_code, response_data):
             _logger.info("Retrying Fintoc checkout session creation on /v1 endpoint")
+            v1_idempotency_key = None
+            if idempotency_key:
+                v1_idempotency_key = f"{idempotency_key}-v1"[:255]
             return self._fintoc_make_request(
                 endpoint='/v1/checkout_sessions',
                 payload=payload,
                 method='POST',
-                idempotency_key=idempotency_key,
+                idempotency_key=v1_idempotency_key,
             )
 
         raise ValidationError(FintocApiClient._build_http_error_message(status_code, response_data))
