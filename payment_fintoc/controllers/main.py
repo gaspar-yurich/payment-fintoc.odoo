@@ -31,10 +31,7 @@ class PaymentFintocController(http.Controller):
         tx_sudo = self._get_tx_from_return(reference, access_token)
         if checkout_session_id:
             tx_sudo.write({'fintoc_checkout_session_id': checkout_session_id})
-        if tx_sudo.state == 'draft':
-            tx_sudo._set_pending(state_message=_(
-                "Returned from Fintoc checkout. Waiting final webhook confirmation."
-            ))
+        # Keep transaction in draft until webhook confirmation to avoid blocking retries in portal.
         return request.redirect('/payment/status')
 
     @http.route(
@@ -53,10 +50,11 @@ class PaymentFintocController(http.Controller):
         tx_sudo = self._get_tx_from_return(reference, access_token)
         if checkout_session_id:
             tx_sudo.write({'fintoc_checkout_session_id': checkout_session_id})
-        if tx_sudo.state == 'draft':
-            tx_sudo._set_pending(state_message=_(
-                "Checkout was canceled on Fintoc. Waiting webhook confirmation."
-            ))
+        if tx_sudo.state in ('draft', 'pending'):
+            tx_sudo._set_canceled(
+                state_message=_("Checkout was canceled on Fintoc."),
+                extra_allowed_states=('draft', 'pending'),
+            )
         return request.redirect('/payment/status')
 
     @http.route(
