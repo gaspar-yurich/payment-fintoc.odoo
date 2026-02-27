@@ -30,7 +30,7 @@ class TestPaymentTransaction(FintocCommon):
         self.assertEqual(tx.fintoc_checkout_session_id, 'cs_test_1')
         self.assertEqual(tx.fintoc_redirect_url, 'https://checkout.example.test/session/1')
 
-    def test_checkout_idempotency_key_is_tx_scoped(self):
+    def test_checkout_idempotency_key_is_tx_and_attempt_scoped(self):
         tx = self._create_transaction(
             flow='redirect',
             payment_method_id=self.payment_method_bank.id,
@@ -48,7 +48,36 @@ class TestPaymentTransaction(FintocCommon):
             tx._get_specific_rendering_values({})
 
         _, idempotency_key = create_checkout_session.call_args.args
-        self.assertEqual(idempotency_key, f'odoo-fintoc-tx-{tx.id}-checkout')
+        self.assertEqual(idempotency_key, f'odoo-fintoc-tx-{tx.id}-checkout-1')
+
+    def test_get_specific_rendering_values_always_creates_fresh_checkout_session(self):
+        tx = self._create_transaction(
+            flow='redirect',
+            payment_method_id=self.payment_method_bank.id,
+            reference='FINTOC-TX-001-FRESH',
+        )
+
+        with patch.object(
+            type(self.provider),
+            '_fintoc_create_checkout_session',
+            side_effect=[
+                {
+                    'id': 'cs_test_fresh_1',
+                    'redirect_url': 'https://checkout.example.test/session/fresh-1',
+                },
+                {
+                    'id': 'cs_test_fresh_2',
+                    'redirect_url': 'https://checkout.example.test/session/fresh-2',
+                },
+            ],
+        ):
+            first_values = tx._get_specific_rendering_values({})
+            second_values = tx._get_specific_rendering_values({})
+
+        self.assertEqual(first_values['api_url'], 'https://checkout.example.test/session/fresh-1')
+        self.assertEqual(second_values['api_url'], 'https://checkout.example.test/session/fresh-2')
+        self.assertEqual(tx.fintoc_checkout_session_id, 'cs_test_fresh_2')
+        self.assertEqual(tx.fintoc_checkout_attempt, 2)
 
     def test_process_notification_data_marks_transaction_done(self):
         tx = self._create_transaction(

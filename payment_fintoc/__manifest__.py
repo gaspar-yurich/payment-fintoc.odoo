@@ -1,6 +1,6 @@
 {
     'name': 'Fintoc Payments',
-    'version': '17.0.1.0.6',
+    'version': '17.0.1.0.7',
     'summary': 'Fintoc payment provider for redirects, webhooks and refunds',
     'description': """
 Fintoc payment provider integration for Odoo 17.

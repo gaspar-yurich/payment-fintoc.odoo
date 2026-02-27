@@ -1,5 +1,6 @@
 import copy
 import logging
+import uuid
 
 from werkzeug import urls
 
@@ -36,6 +37,12 @@ class PaymentTransaction(models.Model):
         readonly=True,
         copy=False,
     )
+    fintoc_checkout_attempt = fields.Integer(
+        string="Fintoc Checkout Attempt",
+        readonly=True,
+        copy=False,
+        default=0,
+    )
 
     # === BUSINESS METHODS === #
 
@@ -45,11 +52,13 @@ class PaymentTransaction(models.Model):
         if self.provider_code != 'fintoc':
             return res
 
-        if self.fintoc_redirect_url and self.fintoc_checkout_session_id:
-            return {'api_url': self.fintoc_redirect_url}
-
+        # Always create a fresh checkout session: Fintoc checkout links are one-time use.
+        checkout_attempt = (self.fintoc_checkout_attempt or 0) + 1
         payload = self._fintoc_prepare_checkout_payload()
-        session_data = self._fintoc_create_checkout_session_with_fallback(payload)
+        session_data = self._fintoc_create_checkout_session_with_fallback(
+            payload,
+            checkout_attempt,
+        )
 
         checkout_session_id = session_data.get('id')
         redirect_url = session_data.get('redirect_url')
@@ -62,6 +71,7 @@ class PaymentTransaction(models.Model):
             'fintoc_checkout_session_id': checkout_session_id,
             'fintoc_redirect_url': redirect_url,
             'provider_reference': checkout_session_id,
+            'fintoc_checkout_attempt': checkout_attempt,
         })
         return {'api_url': redirect_url}
 
@@ -181,10 +191,10 @@ class PaymentTransaction(models.Model):
             "At least one Fintoc payment method must be enabled on the provider."
         ))
 
-    def _fintoc_create_checkout_session_with_fallback(self, payload):
+    def _fintoc_create_checkout_session_with_fallback(self, payload, checkout_attempt):
         """Create checkout session with automatic payment_intent fallback handling."""
         self.ensure_one()
-        idempotency_key = self._fintoc_build_idempotency_key('checkout')
+        idempotency_key = self._fintoc_build_checkout_idempotency_key('checkout', checkout_attempt)
 
         try:
             return self.provider_id._fintoc_create_checkout_session(payload, idempotency_key)
@@ -196,8 +206,9 @@ class PaymentTransaction(models.Model):
                 raise
 
             fallback_payload = self._fintoc_replace_payment_intent_with_payment_initiation(payload)
-            fallback_idempotency_key = self._fintoc_build_idempotency_key(
-                'checkout-payment-initiation-fallback'
+            fallback_idempotency_key = self._fintoc_build_checkout_idempotency_key(
+                'checkout-payment-initiation-fallback',
+                checkout_attempt,
             )
             _logger.info(
                 "Retrying Fintoc checkout with payment_initiation fallback for tx %s",
@@ -208,11 +219,12 @@ class PaymentTransaction(models.Model):
                 fallback_idempotency_key,
             )
 
-    def _fintoc_build_idempotency_key(self, suffix):
-        """Build a deterministic idempotency key unique per transaction."""
+    def _fintoc_build_checkout_idempotency_key(self, suffix, checkout_attempt):
+        """Build a per-attempt idempotency key to avoid reusing expired checkout sessions."""
         self.ensure_one()
         tx_identifier = self.id or self.reference
-        key = f"odoo-fintoc-tx-{tx_identifier}-{suffix}"
+        attempt_identifier = checkout_attempt or uuid.uuid4().hex
+        key = f"odoo-fintoc-tx-{tx_identifier}-{suffix}-{attempt_identifier}"
         return key[:255]
 
     @staticmethod
